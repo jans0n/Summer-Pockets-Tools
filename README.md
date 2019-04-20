@@ -1,5 +1,6 @@
 # Summer Pockets Tools
-Tools for extracting and repacking Summer Pockets resources
+
+
 ----------------
 #### sigluspck
 dumps scene.pck into ss script files and can create a new scene.pck
