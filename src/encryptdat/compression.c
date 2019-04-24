@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "compression.h"
-			
+
 #define LOOKBACK 4096 // size of the sliding window buffer
 //#define LEVEL 17 // maximum amount of bytes to accept for compression
 #define LEVEL 8 // maximum amount of bytes to accept for compression
@@ -14,83 +14,53 @@ int OffTable[LEVEL+1];
 
 void DecompressData(unsigned char *inbuffer, unsigned char *outbuffer, int decomplen)
 {
-	void *endbuf = outbuffer+decomplen;
-	int totaldecomp = 0;
-	
-	for(; outbuffer < endbuf; )
-	{
-		short loop = 8, len = *inbuffer++;
-		
-		#if DECOMPDEBUG == 1
-		printf("%02x\n",len);
-		printf("Decompressed: %08x out of %08x bytes\n",totaldecomp,decomplen);
-		#endif		
-	
-		for(; loop>0 && outbuffer != endbuf; loop--, len>>=1, *inbuffer++)
-		{			
-			if(len&1)
-			{
-				#if DECOMPDEBUG == 1
-				printf("%02x",*inbuffer);
-				#endif
-				
-				*outbuffer++ = *inbuffer;
-				totaldecomp++;
-			}
-			else
-			{
-				unsigned short data = *(unsigned short*)inbuffer++;
-				int templen = 0;
-				
-				#if DECOMPDEBUG == 1
-				printf("%04x ",data);
-				#endif
-				
-				templen = (data&0x0f)+2; // ecx
-				data >>= 4; // eax
-				
-				#if DECOMPDEBUG == 1
-				printf("%04x %04x\n",templen,data);
-				#endif
-				
-				totaldecomp += templen;
-				while(templen-->0)
-				{
-					#if DECOMPDEBUG == 1
-					printf("%02x ",*(outbuffer-data));
-					#endif
-					*outbuffer++ = *(outbuffer-data);
-				}
-				
-				#if DECOMPDEBUG == 1
-				printf("\n");
-				#endif
-			}
-		}
-	}
-	
-	#if DECOMPDEBUG == 1
-	printf("Decompressed: %08x out of %08x bytes\n",totaldecomp,decomplen);
-	#endif
+    //unsigned char *origout = outbuffer;
+    unsigned char *endbuf = outbuffer + decomplen;
+
+    while (outbuffer < endbuf)
+    {
+        short i = 8, flag = *inbuffer++;
+
+        for (; i > 0 && outbuffer != endbuf; i--, inbuffer++)
+        {
+            if(flag & 1) { *outbuffer++ = *inbuffer; }
+            else
+            {
+                unsigned short ref = *(unsigned short*)inbuffer++;
+                int len = (ref & 0x0F) + 2;
+                ref >>= 4;
+
+                while(len-- > 0)
+                {
+                    *outbuffer = *(outbuffer - ref);
+                    outbuffer++;
+                }
+            }
+
+            flag >>= 1;
+        }
+    }
+
+    //printf(">>>> Decompressed: %X of %X bytes\n",outbuffer - origout, decomplen);
 }
 
 unsigned char *CompressData(unsigned char *inbuffer, int len, int *complen, int compression)
 {
 	unsigned char *output = (unsigned char*)calloc(len*4,sizeof(unsigned char)), *outptr = output;
 	int outlen = 0, i = 0, curlen = 0;
-	
+
 	output += 8;
-	
+
 	while(curlen<=len)
 	{
 		unsigned char *ctrlbyte = output;
-		
+
 		outlen++, output++;
-	
+
 		for(i=0; i<8; i++)
 		{
 			int offset = 0, mlen = 0, tcurlen = curlen;
-			
+
 			if(tcurlen>0xfff)
 				tcurlen = 0xfff;
 
@@ -107,47 +77,47 @@ unsigned char *CompressData(unsigned char *inbuffer, int len, int *complen, int 
 					offset = SearchData(inbuffer, tcurlen, inbuffer, LEVEL, &mlen);
 				}
 			}
-						
+
 			if(offset==0)
 			{
 				unsigned char bitmask[] = { 0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80 };
 				int x=0;
-				
+
 				*output++ = *inbuffer++, curlen++;
 				*ctrlbyte |= bitmask[i];
 			}
 			else
 			{
 				unsigned short out = (offset<<4) | mlen&0x0f;
-			
+
 				*(unsigned short*)output++ = out;
-				
+
 				curlen += mlen+2, inbuffer += mlen+2;
 				output++, outlen++;
 			}
-			
+
 			if(curlen>=len)
 				break;
-			
+
 			outlen++;
 		}
 
 	}
-	
+
 	outlen += 8;
-	
+
 	*(int*)outptr = outlen;
 	*(int*)(outptr+4) = len;
-	
+
 	*complen = outlen;
 	return outptr;
 }
 
 /*
 	My implementation of Knuth-Morris-Pratt's searching algorithm, based on what I read from Wikipedia.
-	
+
 	The first step is to generate the table, which creates a table that lists substrings in the input string.
-	
+
 	The second step is the search. It compares the current buffers like normal but then it jumps if it
 	finds a mismatch.
 */
@@ -155,12 +125,12 @@ unsigned char *CompressData(unsigned char *inbuffer, int len, int *complen, int 
 void GenerateTable(unsigned char *buffer, int len)
 {
 	int i=0,x=0;
-	
+
 	memset(OffTable,'\0',LEVEL+1);
-	
+
 	OffTable[0] = -1;
 	OffTable[1] = 0;
-	
+
 	for(i=2; i<len; )
 	{
 		if(buffer[i-1]==buffer[x])
@@ -185,16 +155,16 @@ int SearchData(unsigned char *buffer, int datalen, unsigned char *comp, int comp
 	unsigned char *ptr = buffer-datalen;
 	int i=0, x=0;
 	int matchlen=0,offset=0;
-	
+
 	if(complen-2<=0 || datalen<=complen)
 		return 0;
-		
+
 	while(x < datalen)
 	{
 		if(comp[i]==ptr[i+x])
-		{				
+		{
 			i++;
-			
+
 			if(i==complen)
 			{
 				matchlen = i;
@@ -209,24 +179,24 @@ int SearchData(unsigned char *buffer, int datalen, unsigned char *comp, int comp
 				matchlen = i;
 				offset = x;
 			}
-		
+
 			x += i-OffTable[i];
-			
+
 			if(OffTable[i] > 0)
 				i = OffTable[i];
 			else
 				i = 0;
 		}
 	}
-	
+
 	if(matchlen<ACCEPTLEVEL)
 		matchlen = 0, offset = 0;
 	else
 		offset = (int)buffer-((int)ptr+offset);
-		
+
 	if(matchlen>2)
 		matchlen -= 2;
-		
+
 	#if COMPDEBUG == 1
 	if(offset!=0 && matchlen!=0)
 	{
@@ -244,8 +214,8 @@ int SearchData(unsigned char *buffer, int datalen, unsigned char *comp, int comp
 		//printf("%02x   %08x [%02x%02x%02x%02x] %08x [%02x%02x%02x%02x]\n\n",(matchlen+2),(int)buffer,*(unsigned char*)(buffer),*(unsigned char*)(buffer+1),*(unsigned char*)(buffer+2),*(unsigned char*)(buffer+3),(int)buffer-offset,*(unsigned char*)(buffer-offset),*(unsigned char*)(buffer-offset+1),*(unsigned char*)(buffer-offset+2),*(unsigned char*)(buffer-offset+3));
 	}
 	#endif
-	
-	
+
+
 	*outlen = matchlen;
 	return offset;
 }
