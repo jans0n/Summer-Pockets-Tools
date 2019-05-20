@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include "compression.c"
+#include "compression.h"
+
+//#define KISARAGI // use version 2 instead
 
 int main(int argc, char **argv)
 {
@@ -13,7 +15,7 @@ int main(int argc, char **argv)
 		printf("usage: %s infile outfile\n",argv[0]);
 		return 0;
 	}
-
+	
 	infile = fopen(argv[1],"rb");
 	if(!infile)
 	{
@@ -33,12 +35,19 @@ int main(int argc, char **argv)
 	fread(buffer,1,size,infile);
 	fclose(infile);
 
-	if(complen != size)
-	{
-		printf("complen:%08x\n",complen);
-		for(i=0; i<size; i++)
-			buffer[i] ^= key2[i&0x0f];
+#ifdef KISARAGI
+	// i don't know what the case is exactly but i'm too lazy to figure it out.
+	for(i=0; i<size; i++)
+		buffer[i] ^= key2[i&0x0f];
+#endif
 
+	if(complen != 0)
+	{
+		for(i=0; i<complen; i++)
+			buffer[i] ^= key2[i&0x0f];
+	}
+	else
+	{
 		for(i=0; i<size; i++)
 			buffer[i] ^= key[i&0xff];
 

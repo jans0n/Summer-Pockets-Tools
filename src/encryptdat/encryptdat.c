@@ -1,10 +1,6 @@
-/*
-	Compress/Encrypt Gameexe.dat from Summer Pockets
-*/
-
 #include <stdio.h>
 #include <stdlib.h>
-#include "compression.c"
+#include "compression.h"
 
 int main(int argc, char **argv)
 {
@@ -48,8 +44,6 @@ int main(int argc, char **argv)
 
 	for(i=0; i<complen; i++)
 		output[i] ^= key[i&0xff];
-		for(i=0; i<complen; i++)
-		    output[i] ^= key2[i&0x0f];
 
 	fwrite("\x00\x00\x00\x00",1,4,outfile);
 	fwrite("\x00\x00\x00\x00",1,4,outfile);
