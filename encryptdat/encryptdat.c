@@ -1,8 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include "compression.h"
+#include "compression.c"
 
-//#define KISARAGI // use version 2 instead
 
 void Decompress(FILE *infile, FILE *outfile)
 {
@@ -19,19 +18,12 @@ void Decompress(FILE *infile, FILE *outfile)
 	fread(buffer,1,size,infile);
 	fclose(infile);
 
-#ifdef KISARAGI
-	// i don't know what the case is exactly but i'm too lazy to figure it out.
-	for(i=0; i<size; i++)
-		buffer[i] ^= key2[i&0x0f];
-#endif
-
-	if(complen != 0)
+	if(complen != size)
 	{
-		for(i=0; i<complen; i++)
+		printf("complen:%08x\n",complen);
+		for(i=0; i<size; i++)
 			buffer[i] ^= key2[i&0x0f];
-	}
-	else
-	{
+
 		for(i=0; i<size; i++)
 			buffer[i] ^= key[i&0xff];
 
@@ -55,7 +47,7 @@ void Compress(FILE *infile, FILE *outfile)
 {
 	unsigned char *buffer = NULL, *output = NULL;
 	int complen=0, i=0, size=0;
-	
+
 	fseek(infile,0,SEEK_END);
 	size = ftell(infile);
 	rewind(infile);
@@ -105,7 +97,7 @@ int main(int argc, char **argv)
 		printf("Invalid mode '%s'\n", argv[1]);
 		return 0;
 	}
-	
+
 	infile = fopen(argv[2],"rb");
 	if(!infile)
 	{
@@ -126,5 +118,3 @@ int main(int argc, char **argv)
 
 	return 0;
 }
-
-
