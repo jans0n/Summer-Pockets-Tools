@@ -5,6 +5,8 @@
 #include "structs.h"
 #include <vector>
 
+#include "ssinsert.h"
+
 using namespace std;
 
 typedef struct _NewlineAssociation
@@ -14,34 +16,17 @@ typedef struct _NewlineAssociation
 	int type;
 } NewlineAssociation;
 
-vector<NewlineAssociation*> newlines;
+Scrhead scrhead;
 
-int main(int argc, char **argv)
+void Dump(FILE *infile, FILE *outfile)
 {
-	FILE *infile = NULL, *outfile = NULL;
+	vector<NewlineAssociation*> newlines;
 	Entry *strings = NULL;
 	unsigned char *bytecode = NULL;
 	int i = 0;
-	
-	if(argc!=3)
-	{
-		printf("usage: %s inscript outtext\n",argv[0]);
-		return 0;
-	}
-	
-	infile = fopen(argv[1],"rb");
-	if(!infile)
-	{
-		printf("Could not open %s\n",argv[1]);
-		return -1;
-	}
-	
-	outfile = fopen(argv[2],"wb");
-	fwrite("\xff\xfe",1,2,outfile);
-	
-	setlocale(LC_ALL, "Japanese");
-	
+
 	fread(&scrhead,sizeof(scrhead),1,infile);
+	fwrite("\xff\xfe",1,2,outfile);
 	
 	bytecode = (unsigned char*)calloc(scrhead.bytecode.size,sizeof(unsigned char));
 	fseek(infile,scrhead.bytecode.offset,SEEK_SET);
@@ -150,6 +135,58 @@ int main(int argc, char **argv)
 	
 	free(strings);
 	free(bytecode);
+}
+
+
+void verifyFile(FILE *file, char *fileName)
+{
+	if (!file)
+	{
+		printf("Could not open %s\n", fileName);
+		exit(-1);
+	}
+}
+
+
+int main(int argc, char **argv)
+{
+	FILE *file1 = NULL, *file2 = NULL, *file3 = NULL;
+
+	if(argc<4 || argc>5)
+	{
+		printf("usage: %s dump <inscript> <outtext>\n", argv[0]);
+		printf("usage: %s insert <inscript> <intext> <outscript>\n", argv[0]);
+		return 0;
+	}
+
+	char *mode = argv[1];
+	
+	if (strcmp(mode,"dump") > 0 && strcmp(mode,"insert") > 0)
+	{
+		printf("Invalid mode '%s'\n", mode);
+		return 0;
+	}
+	
+	setlocale(LC_ALL, "Japanese");
+	
+	file1 = fopen(argv[2],"rb");
+	verifyFile(file1, argv[2]);
+
+	// Dump
+	if (strcmp(mode,"dump") == 0)
+	{
+		file2 = fopen(argv[3],"wb");
+		Dump(file1, file2);
+	}
+	// Insert
+	else
+	{
+		file2 = fopen(argv[3],"rb");
+		verifyFile(file2, argv[3]);
+
+		file3 = fopen(argv[4], "wb");
+		Insert(file1, file2, file3, argv[4]);
+	}
 	
 	return 0;
 }
