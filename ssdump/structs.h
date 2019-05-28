@@ -38,7 +38,7 @@ typedef struct
 	int size;
 } StackInt;
 
-struct
+struct Scrhead
 {
 	int headersize; // 0x00
 	Entry bytecode; // 0x04
@@ -57,9 +57,11 @@ struct
 	Entry unk11; // 0x6c // string table
 	Entry unk12; // 0x74
 	Entry unk13; // 0x7c
-} scrhead;
+};
 
-struct
+extern Scrhead scrhead;
+
+struct Pckhead
 {
 	int headersize;
 	EntryChar table1;
@@ -75,5 +77,8 @@ struct
 	//EntryChar unk2;
 	int extraencrypt;
 	int unk2;
-} pckhead;
+};
+
+extern Pckhead pckhead;
+
 #pragma pack()
