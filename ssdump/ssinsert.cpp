@@ -9,8 +9,7 @@
 #include <windows.h>
 
 using namespace std;
-//using std::vector;
-//using std::wstring;
+
 
 FILE *origscript = NULL, *text = NULL, *outfile = NULL;
 Entry *stringtable = NULL;
@@ -219,39 +218,19 @@ void InsertNewlines(char *filename)
 	fclose(infile);
 }
 
-int main(int argc, char **argv)
+void Insert(FILE *file1, FILE *file2, FILE *file3, char *file3Name)
 {
-	if (argc != 4)
-	{
-		printf("usage: %s inscript intext outscript\n", argv[0]);
-		return 0;
-	}
-
-	origscript = fopen(argv[1], "rb");
-	if (!origscript)
-	{
-		printf("Could not open %s\n", argv[1]);
-		return -1;
-	}
-
-	text = fopen(argv[2], "rb");
-	if (!text)
-	{
-		printf("Could not open %s\n", argv[2]);
-		return -1;
-	}
-
-	outfile = fopen(argv[3], "wb");
+	origscript = file1;
+	text = file2;
+	outfile = file3;
 
 	fread(&scrhead, sizeof(scrhead), 1, origscript);
 
-	setlocale(LC_ALL, "Japanese");
 	ParseText();
 	InsertScript();
 
 	fclose(outfile);
 
-	InsertNewlines(argv[3]);
-
-	return 0;
+	InsertNewlines(file3Name);
 }
+
