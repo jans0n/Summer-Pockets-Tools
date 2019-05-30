@@ -3,11 +3,11 @@
 #include <cstring>
 #include <wchar.h>
 #include <locale.h>
+#include "structs.h"
 #include <vector>
+
 #include <windows.h>
 
-#include "structs.h"
- 
 using namespace std;
 
 
