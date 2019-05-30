@@ -1,7 +1,4 @@
 #pragma pack(1)
-#ifndef _structs_h_
-#define _structs_h_
-
 typedef struct
 {
 	int offset;
@@ -83,6 +80,5 @@ struct Pckhead
 };
 
 extern Pckhead pckhead;
-#endif
 
 #pragma pack()
