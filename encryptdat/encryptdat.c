@@ -92,7 +92,7 @@ int main(int argc, char **argv)
 		return 0;
 	}
 
-	if (strcmp(argv[1],"encrypt") > 0 && strcmp(argv[1],"decrypt") > 0)
+	if (strcmp(argv[1],"encrypt") != 0 && strcmp(argv[1],"decrypt") != 0)
 	{
 		printf("Invalid mode '%s'\n", argv[1]);
 		return 0;

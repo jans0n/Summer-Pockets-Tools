@@ -161,7 +161,7 @@ int main(int argc, char **argv)
 
 	char *mode = argv[1];
 
-	if (strcmp(mode,"dump") > 0 && strcmp(mode,"insert") > 0)
+	if (strcmp(mode,"dump") != 0 && strcmp(mode,"insert") != 0)
 	{
 		printf("Invalid mode '%s'\n", mode);
 		return 0;
