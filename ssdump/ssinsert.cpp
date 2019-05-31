@@ -3,13 +3,12 @@
 #include <cstring>
 #include <wchar.h>
 #include <locale.h>
-#include <vector>
-#include <windows.h>
-
 #include "structs.h"
- 
-using namespace std;
+#include <vector>
 
+using namespace std;
+//using std::vector;
+//using std::wstring;
 
 FILE *origscript = NULL, *text = NULL, *outfile = NULL;
 Entry *stringtable = NULL;
@@ -26,109 +25,101 @@ vector<FixLine*> fixLines;
 
 void ParseText()
 {
-	unsigned int i;
-	int x = 0, j = 0, oldlen = 0, b = scrhead.strindex.size, curLine = 0, kk = 0;
-	unsigned char bomtest[4];
+	int i=0, x=0, j=0, oldlen = 0, b = scrhead.strindex.size, curLine = 0, kk = 0;
 
-	fread(bomtest, 1, 3, text);
+	fread(&i,1,2,text);
 
-	if (!(bomtest[0] == 0xEF && bomtest[1] == 0xBB && bomtest[2] == 0xBF)) // skip utf-8 BOM
+	if(i!=0xfeff) // skip unicode BOM
 		rewind(text);
 
 	scrhead.strindex.size = scrhead.strtable.size = 0;
 
-	while (!feof(text))
+	while(!feof(text))
 	{
 		wchar_t temp[2048];
-		char utf8buf[3072];
 
-		memset(temp, '\0', 2048);
-		memset(utf8buf, '\0', 3072);
-		fgets(utf8buf, 3072, text);
-		MultiByteToWideChar(CP_UTF8, 0, utf8buf, strlen(utf8buf) + 1, temp, 2048);
+		memset(temp,'\0',2048);
+		fgetws(temp,2048,text);
 
-		if (temp[0] == '\0')
+		if(temp[0]=='\0')
 			break;
 
-		if (temp[0] == '{')
+		if(temp[0] == '{')
 		{
 			unsigned int offset = 0, type = 0;
+			int i = 0;
 
-			for (i = 1; i < wcslen(temp); i++)
+			for(i = 1; i < wcslen(temp); i++)
 			{
-				if (temp[i] == '}')
+				if(temp[i] == '}')
 					break;
 
 				offset <<= 4;
-				if ((temp[i] & 0x40) == 0x40)
+				if((temp[i] & 0x40) == 0x40)
 					offset |= (temp[i] & (~0x20)) - 0x37;
-				else if (temp[i] < 0x3a)
+				else if(temp[i] < 0x3a)
 					offset |= temp[i] - 0x30;
 			}
 
-			if (temp[i] == '}')
+			if(temp[i] == '}')
 				i++;
 
-			while (i < wcslen(temp) && temp[i] == ' ')
+			while(i < wcslen(temp) && temp[i] == ' ')
 				i++;
 
-			for (; i < wcslen(temp); i++)
+			for(; i < wcslen(temp); i++)
 			{
-				if (temp[i] == '\n' || temp[i] == '\r')
+				if(temp[i] == '\n' || temp[i]=='\r')
 					break;
-				if ((temp[i] < '0' || temp[i] > '9') &&
+				if((temp[i] < '0' || temp[i] > '9') &&
 					(temp[i] < 'A' || temp[i] > 'F') &&
 					(temp[i] < 'a' || temp[i] > 'f'))
-					break;
+						break;
 
 				type <<= 4;
-				if ((temp[i] & 0x40) == 0x40)
+				if((temp[i] & 0x40) == 0x40)
 					type |= (temp[i] & (~0x20)) - 0x37;
-				else if (temp[i] < 0x3a)
+				else if(temp[i] < 0x3a)
 					type |= temp[i] - 0x30;
 			}
 
 			FixLine *fixme = (FixLine*)calloc(1, sizeof(FixLine));
 			fixme->offset = offset;
-			fixme->type = type;
+			fixme->type =  type;
 			fixLines.push_back(fixme);
 
 		}
-		else if (temp[0] == '<')
+		else if(temp[0]=='<')
 		{
-			unsigned int len = 0, k = 0, key = 0;
+			int len = 0, k=0, key = 0;
 
-			if (temp[wcslen(temp) - 1] == '\r' || temp[wcslen(temp) - 1] == '\n')
-				temp[wcslen(temp) - 1] = '\0';
-			if (temp[wcslen(temp) - 1] == '\r' || temp[wcslen(temp) - 1] == '\n')
-				temp[wcslen(temp) - 1] = '\0';
+			if(temp[wcslen(temp)-1]=='\r' || temp[wcslen(temp)-1]=='\n')
+				temp[wcslen(temp)-1] = '\0';
 
-			for (k = 0; k < wcslen(temp); k++)
+			for(k=0; k<wcslen(temp)-1; k++)
 			{
-				if (temp[k] == '\\' && temp[k + 1] == 'n')
+				if(temp[k]=='\\' && temp[k+1]=='n')
 				{
-					int l;
+					int l=0;
 
-					temp[k++] = '\x0a';
+					temp[k++] = '\x0a', temp[k] = '\0';
 
-					for (l = k; l < (int)wcslen(temp); l++)
-						temp[l] = temp[l + 1];
-
-					temp[l] = 0;
+					for(l=k; j<wcslen(temp)-k-2; l++)
+						temp[l] = temp[l+1];
 				}
 
-				else if (temp[k] == '\\' && temp[k + 1] == '\\')
+				else if(temp[k]=='\\' && temp[k+1]=='\\')
 					break;
 			}
 			temp[k] = '\0';
 
-			for (k = 0; k < wcslen(temp) - 1; k++)
+			for(k=0; k<wcslen(temp)-1; k++)
 			{
-				if (temp[k] == '>')
+				if(temp[k]=='>')
 				{
 					k++;
 
-					while (k < wcslen(temp) - 1 && temp[k] != ' ')
+					while(k < wcslen(temp) - 1 && temp[k] != ' ')
 						k++;
 					k++;
 
@@ -137,30 +128,30 @@ void ParseText()
 			}
 
 			kk = k;
-			len = wcslen(temp + kk);
+			len = wcslen(temp+kk);
 			i++;
 
-			if (scrhead.strtable.size == 0)
+			if(scrhead.strtable.size==0)
 			{
-				astring = (wchar_t*)calloc(len + 1, sizeof(wchar_t));
-				//string = (wchar_t*)calloc(0xffffff,sizeof(wchar_t));
-				stringtable = (Entry*)calloc(j + 1, sizeof(Entry));
+				astring = (wchar_t*)calloc(len+1,sizeof(wchar_t));
+				//astring = (wchar_t*)calloc(0xffffff,sizeof(wchar_t));
+				stringtable = (Entry*)calloc(j+1,sizeof(Entry));
 			}
 			else
 			{
-				astring = (wchar_t*)realloc(astring, (x + len + 1) * 2);
-				stringtable = (Entry*)realloc(stringtable, (j + 1) * sizeof(Entry));
+				astring = (wchar_t*)realloc(astring,(x+len+1)*2);
+				stringtable = (Entry*)realloc(stringtable,(j+1)*sizeof(Entry));
 			}
 
 			key = curLine * 0x7087;
 			curLine++;
-			for (k = 0; k < len; k++)
+			for(k=0; k<len; k++)
 			{
-				temp[k + kk] ^= key & 0xffff;
+				temp[k+kk] ^= key&0xffff;
 			}
 
 			//wcsncat(string,temp+kk,len);
-			memcpy(astring + x, temp + kk, len * 2);
+			memcpy(astring+x,temp+kk,len * 2);
 
 
 			stringtable[j].offset = oldlen;
@@ -173,9 +164,9 @@ void ParseText()
 		}
 	}
 
-	if (scrhead.strindex.size != b)
+	if(scrhead.strindex.size!=b)
 	{
-		printf("Found %d lines, expected %d\n", scrhead.strindex.size, b);
+		printf("Found %d lines, expected %d\n",scrhead.strindex.size,b);
 		exit(1);
 	}
 }
@@ -185,33 +176,33 @@ void InsertScript()
 	char *buffer = NULL;
 	int size = 0;
 
-	fseek(origscript, 0, SEEK_END);
-	size = ftell(origscript) - scrhead.headersize;
-	fseek(origscript, scrhead.headersize, SEEK_SET);
+	fseek(origscript,0,SEEK_END);
+	size = ftell(origscript)-scrhead.headersize;
+	fseek(origscript,scrhead.headersize,SEEK_SET);
 
-	buffer = (char*)calloc(size, sizeof(char));
-	fread(buffer, 1, size, origscript);
+	buffer = (char*)calloc(size,sizeof(char));
+	fread(buffer,1,size,origscript);
 
-	scrhead.strindex.offset = size + scrhead.headersize;
-	scrhead.strtable.offset = scrhead.strindex.offset + scrhead.strindex.size * sizeof(Entry);
+	scrhead.strindex.offset = size+scrhead.headersize;
+	scrhead.strtable.offset = scrhead.strindex.offset+scrhead.strindex.size*sizeof(Entry);
 
-	fwrite(&scrhead, sizeof(scrhead), 1, outfile);
-	fwrite(buffer, 1, size, outfile);
-	fwrite(stringtable, sizeof(Entry), scrhead.strindex.size, outfile);
-	fwrite(astring, sizeof(wchar_t), stringLen, outfile);
-	fwrite("\0\0", 1, 2, outfile);
+	fwrite(&scrhead,sizeof(scrhead),1,outfile);
+	fwrite(buffer,1,size,outfile);
+	fwrite(stringtable,sizeof(Entry),scrhead.strindex.size,outfile);
+	fwrite(astring,sizeof(wchar_t),stringLen,outfile);
+	fwrite("\0\0",1,2,outfile);
 }
 
 void InsertNewlines(char *filename)
 {
 	FILE *infile = fopen(filename, "rb+");
 
-	fread(&scrhead, sizeof(scrhead), 1, infile);
+	fread(&scrhead,sizeof(scrhead),1,infile);
 	int baseOffset = scrhead.bytecode.offset;
 
-	for (unsigned int i = 0; i < fixLines.size(); i++)
+	for(int i = 0; i < fixLines.size(); i++)
 	{
-		fseek(infile, baseOffset + fixLines[i]->offset, SEEK_SET);
+		fseek(infile,baseOffset+fixLines[i]->offset,SEEK_SET);
 		fwrite(&fixLines[i]->type, 1, 4, infile);
 	}
 
@@ -233,4 +224,3 @@ void Insert(FILE *file1, FILE *file2, FILE *file3, char *file3Name)
 
 	InsertNewlines(file3Name);
 }
-
