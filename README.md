@@ -1,7 +1,5 @@
 # Summer Pockets Tools
 
-Note: These tools are old now that the whole Siglus SDK got [leaked](https://github.com/imKota/SiglusEngineOfficialKit)
-
 ----------------
 #### sigluspck
 Dumps Scene.pck into ss script files and can create a new Scene.pck
